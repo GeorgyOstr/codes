@@ -18,7 +18,13 @@ int main(int argc, char **argv)
 
     std::vector< cv::ConnectedComponent > connectedComponents;
 
-    cv::findConnectedComponents(binaryImage, connectedComponents, cv::fourConnected);
+    cv::findConnectedComponents(binaryImage, connectedComponents, cv::eightConnected, 255u);
+
+    cv::Mat components(originalImage.size(), CV_8UC3);
+
+    cv::drawConnectedComponents(components, connectedComponents);
+
+    cv::imshow("components", components);
 
     cv::waitKey(0);
 
