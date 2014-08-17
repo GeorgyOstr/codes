@@ -1,0 +1,5 @@
+cmake_minimum_required(VERSION 2.4.8)
+find_package(OpenCV REQUIRED)
+set(TARGET2 capture)
+add_executable(${TARGET2} capture.cpp )
+target_link_libraries(${TARGET2} ${OpenCV_LIBS})
