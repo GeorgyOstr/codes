@@ -1,9 +1,9 @@
 #include <opencv2/opencv.hpp>
-#include <opencv2/core/core.hpp>
-#include <opencv2/highgui/highgui.hpp>
 
 #include <ctime>
 #include <iomanip>
+
+#define HIGH_DEF
 
 const std::string currentDateTime() 
 {
@@ -19,7 +19,6 @@ const std::string currentDateTime()
 
 int main(int, char** )
 {
-
 	const int alarmThreshhold = 17000;
 	const double fps = 20.0;
 #ifdef HIGH_DEF
@@ -51,7 +50,7 @@ int main(int, char** )
 
 	cv::VideoWriter outputVideo;
 	        
-	outputVideo.open("C:\\Users\\Dinar\\Desktop\\surveillance\\video.mpeg", CV_FOURCC('P','I','M','1'), fps, frame.size(), true);
+    outputVideo.open("video.mpeg", CV_FOURCC('P','I','M','1'), fps, frame.size(), true);
     
     if (!outputVideo.isOpened())
     {
@@ -91,12 +90,10 @@ int main(int, char** )
 			frameCount++;
 		
 
-
-
 		if(sum > 0)
 			std::cout << "diff value " <<std::fixed<<std::setprecision(0)<<std::setw(6)<<sum;// << std::endl;//"\xd";
 		else
-			std::cout << "                 ";//<<std::endl;//"\xd";
+            std::cout << "                 ";
 
 
 		if(frameCount < saveFrameCount)
