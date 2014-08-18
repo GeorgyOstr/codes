@@ -115,6 +115,15 @@ void findConnectedComponents(const cv::Mat &image, std::vector<cv::ConnectedComp
             }
         }
     }
+
+    for(auto &component : connectedComponents)
+    {
+        for(const auto &point : component.getPoints())
+        {
+            if(cv::isBound(point, inverted, pixelConnectivity))
+                component.addBoundPoint(point);
+        }
+    }
 }
 
 
@@ -164,11 +173,85 @@ void ConnectedComponent::addPoint(const Point2i &point)
 
 void ConnectedComponent::draw(Mat &image, cv::RNG &rng) const
 {
-    int icolor = (unsigned) rng;
-    Scalar color(icolor&255, (icolor>>8)&255, (icolor>>16)&255);
+    int iColor_rng = (unsigned) rng;
+    Scalar iColor(iColor_rng&255, (iColor_rng>>8)&255, (iColor_rng>>16)&255);
 
     for (const auto &point : points)
-        cv::circle(image, point, 1, color);
+        cv::circle(image, point, 1, iColor);
+
+
+    int bColor_rng = (unsigned) rng;
+    Scalar bColor(bColor_rng&255, (bColor_rng>>8)&255, (bColor_rng>>16)&255);
+
+    for (const auto &bPoint : boundPoints)
+        cv::circle(image, bPoint, 1, bColor);
+
+    cv::Point2d center = calcCenter();
+    cv::circle(image, center, 2, bColor, 6);
+
+    std::ostringstream oss;  oss << roundness_1();
+
+    //oss << std::setw(2) << std::setprecision(2);
+
+    cv::putText(image, oss.str(), center, cv::FONT_HERSHEY_PLAIN, 1, bColor);
+}
+
+const std::vector<Point2i> &ConnectedComponent::getPoints() const
+{
+    return points;
+}
+
+void ConnectedComponent::addBoundPoint(const Point2i &point)
+{
+    boundPoints.push_back(point);
+}
+
+unsigned ConnectedComponent::calcPerimeter() const
+{
+    return boundPoints.size();
+}
+
+unsigned ConnectedComponent::calcArea() const
+{
+    return points.size();
+}
+
+Point2d ConnectedComponent::calcCenter() const
+{
+    cv::Point2d center(0.,0.);
+
+    for(const auto & point: points)
+        center +=  cv::Point2d(point.x, point.y);
+
+    center.x = center.x / calcArea();
+    center.y = center.y / calcArea();
+
+    return center;
+}
+
+double ConnectedComponent::roundness_1() const
+{
+    return static_cast<double>( calcPerimeter() * calcPerimeter()) / calcArea();
+}
+
+double ConnectedComponent::roundness_2() const
+{
+
+}
+
+double ConnectedComponent::centralSecondMomentRow() const
+{
+
+}
+
+double ConnectedComponent::centralSecondMomentCols() const
+{
+
+}
+
+double ConnectedComponent::mixedCentralMoment() const
+{
+
 }
 
 void drawConnectedComponents(Mat &image, const std::vector<ConnectedComponent> &connectedComponents)
@@ -179,6 +262,28 @@ void drawConnectedComponents(Mat &image, const std::vector<ConnectedComponent> &
 
     for(const auto &connectedComponent : connectedComponents)
         connectedComponent.draw(image, rng);
+}
+
+bool isBound(const Point2i &point, const Mat &image, PixelConnectivity pixelConnectivity)
+{
+    cv::Rect imageRect(cv::Point2i(0,0), image.size());
+
+    std::vector<cv::Point2i> dPoints {cv::Point2i(-1,0), cv::Point2i(1,0), cv::Point2i(0,-1), cv::Point2i(0,1)};
+
+    if(pixelConnectivity == cv::eightConnected)
+    {
+        dPoints.push_back(cv::Point2i(-1,-1));
+        dPoints.push_back(cv::Point2i(-1, 1));
+        dPoints.push_back(cv::Point2i( 1,-1));
+        dPoints.push_back(cv::Point2i( 1, 1));
+    }
+
+    for( const auto &dPoint : dPoints)
+        if(imageRect.contains(point + dPoint))
+            if(image.at<short>(point + dPoint) == 0)
+                return true;
+
+    return false;
 }
 
 }
