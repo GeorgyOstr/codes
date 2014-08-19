@@ -111,7 +111,6 @@ void findConnectedComponents(const cv::Mat &image, std::vector<cv::ConnectedComp
                 }
 
                 connectedComponents[adapter[parent]].addPoint(point);
-
             }
         }
     }
@@ -174,25 +173,56 @@ void ConnectedComponent::addPoint(const Point2i &point)
 void ConnectedComponent::draw(Mat &image, cv::RNG &rng) const
 {
     int iColor_rng = (unsigned) rng;
-    Scalar iColor(iColor_rng&255, (iColor_rng>>8)&255, (iColor_rng>>16)&255);
+    cv::Scalar iColor(iColor_rng&255, (iColor_rng>>8)&255, (iColor_rng>>16)&255);
 
     for (const auto &point : points)
         cv::circle(image, point, 1, iColor);
 
-
-    int bColor_rng = (unsigned) rng;
-    Scalar bColor(bColor_rng&255, (bColor_rng>>8)&255, (bColor_rng>>16)&255);
+    cv::Scalar bColor = cv::Scalar::all(255) - iColor;
 
     for (const auto &bPoint : boundPoints)
         cv::circle(image, bPoint, 1, bColor);
 
-    cv::Point2d center = calcCenter();
-    cv::circle(image, center, 2, bColor, 6);
+    const cv::Rect bRect = getBoundBox();
 
-    std::ostringstream oss;  oss << roundness_1();
+    const cv::Point2i tl = bRect.tl();
+    const cv::Point2i br = bRect.br();
+    cv::Point2i center = cv::Point2i(tl.x, br.y + 13);
 
-    //oss << std::setw(2) << std::setprecision(2);
+    cv::circle(image, calcCenter(), 2, bColor, 6);
 
+    cv::rectangle(image, bRect, cv::Scalar(0,255,0));
+
+    auto centralSecond = centralSecondMomentRowNCols();
+    auto mixedCentral = mixedCentralMoment();
+
+    cv::Size textSize = cv::getTextSize("test", cv::FONT_HERSHEY_PLAIN, 1, 1, NULL);
+    cv::Point2i dt(0, textSize.height+1);
+
+    std::ostringstream oss;
+    oss << std::setprecision(4);
+
+    oss << "roundness_1 " << roundness_1();
+    cv::putText(image, oss.str(), center, cv::FONT_HERSHEY_PLAIN, 1, bColor);
+
+    center += dt;
+    oss.str("");
+    oss << "roundness_2 " << roundness_2();
+    cv::putText(image, oss.str(), center, cv::FONT_HERSHEY_PLAIN, 1, bColor);
+
+    center += dt;
+    oss.str("");
+    oss << "central_x " << std::get<0>(centralSecond);
+    cv::putText(image, oss.str(), center, cv::FONT_HERSHEY_PLAIN, 1, bColor);
+
+    center += dt;
+    oss.str("");
+    oss << "central_y " << std::get<1>(centralSecond);
+    cv::putText(image, oss.str(), center, cv::FONT_HERSHEY_PLAIN, 1, bColor);
+
+    center += dt;
+    oss.str("");
+    oss << "mixed " << mixedCentral;
     cv::putText(image, oss.str(), center, cv::FONT_HERSHEY_PLAIN, 1, bColor);
 }
 
@@ -220,8 +250,10 @@ Point2d ConnectedComponent::calcCenter() const
 {
     cv::Point2d center(0.,0.);
 
-    for(const auto & point: points)
-        center +=  cv::Point2d(point.x, point.y);
+    std::for_each(points.begin(), points.end(), [&center](const cv::Point2d &point)
+    {
+        center +=point;
+    });
 
     center.x = center.x / calcArea();
     center.y = center.y / calcArea();
@@ -236,22 +268,85 @@ double ConnectedComponent::roundness_1() const
 
 double ConnectedComponent::roundness_2() const
 {
+    cv::Point2d center {calcCenter()};
+    double accumM{}, accumD{};
 
+    auto functorMU = [center, &accumM](const cv::Point2d &point)
+    {
+        const cv::Point2d tPoint = point - center;
+        accumM += tPoint.dot(tPoint);
+    };
+    std::for_each(boundPoints.begin(), boundPoints.end(), functorMU);
+
+    accumM /= calcPerimeter();
+
+    auto functorD = [center, accumM, &accumD](const cv::Point2d &point)
+    {
+        const cv::Point2d tPoint = point - center;
+        accumD += std::pow(tPoint.dot(tPoint) - accumM, 2);
+    };
+    std::for_each(boundPoints.begin(), boundPoints.end(), functorD);
+
+    accumD /= calcPerimeter();
+
+    accumD = std::sqrt(accumD);
+
+    return accumM / accumD;
 }
 
-double ConnectedComponent::centralSecondMomentRow() const
+std::tuple<double, double> ConnectedComponent::centralSecondMomentRowNCols() const
 {
+    cv::Point2d center {calcCenter()}, accum {};
 
-}
+    auto functor = [center, &accum](const cv::Point2d &point)
+    {
+        const cv::Point2d &tPoint = point - center;
+        accum += cv::Point2d(tPoint.x * tPoint.x, tPoint.y * tPoint.y);
+    };
+    std::for_each(points.begin(), points.end(), functor);
 
-double ConnectedComponent::centralSecondMomentCols() const
-{
+    accum.x /= calcArea();
+    accum.y /= calcArea();
 
+    return std::make_pair(accum.x, accum.y);
 }
 
 double ConnectedComponent::mixedCentralMoment() const
 {
+    cv::Point2d center {calcCenter()};
+    double accum {};
 
+    auto functor = [center, &accum](const cv::Point2d &point)
+    {
+        const cv::Point2d tPoint = point - center;
+        accum += tPoint.x * tPoint.y;
+    };
+    std::for_each(points.begin(), points.end(), functor);
+
+    return accum / calcArea();
+}
+
+Rect ConnectedComponent::getBoundBox() const
+{
+    cv::Point2i tl(std::numeric_limits<int>::max(), std::numeric_limits<int>::max()),
+            br(std::numeric_limits<int>::min(), std::numeric_limits<int>::min());
+
+    for(const auto & bPoint : boundPoints)
+    {
+        if(tl.x > bPoint.x)
+            tl.x = bPoint.x;
+
+        if(tl.y > bPoint.y)
+            tl.y = bPoint.y;
+
+        if(br.x < bPoint.x)
+            br.x = bPoint.x;
+
+        if(br.y < bPoint.y)
+            br.y = bPoint.y;
+    }
+
+    return cv::Rect(tl, br);
 }
 
 void drawConnectedComponents(Mat &image, const std::vector<ConnectedComponent> &connectedComponents)
@@ -260,8 +355,10 @@ void drawConnectedComponents(Mat &image, const std::vector<ConnectedComponent> &
 
     cv::RNG rng( 0xFFFFFFFF );
 
-    for(const auto &connectedComponent : connectedComponents)
-        connectedComponent.draw(image, rng);
+    using namespace std::placeholders;
+
+    std::for_each(connectedComponents.begin(), connectedComponents.end(),
+                  std::bind(std::mem_fn(&ConnectedComponent::draw), _1, image, rng));
 }
 
 bool isBound(const Point2i &point, const Mat &image, PixelConnectivity pixelConnectivity)

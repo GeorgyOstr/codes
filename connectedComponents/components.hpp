@@ -19,9 +19,10 @@ namespace cv
         double roundness_1() const;
         double roundness_2() const;
 
-        double centralSecondMomentRow() const;
-        double centralSecondMomentCols() const;
+        std::tuple<double, double> centralSecondMomentRowNCols() const;
         double mixedCentralMoment() const;
+
+        cv::Rect getBoundBox() const;
 
     private:
         std::vector<cv::Point2i> points;
@@ -33,7 +34,7 @@ namespace cv
     void findConnectedComponents(const cv::Mat &image, std::vector<cv::ConnectedComponent> &connectedComponents,
                                  PixelConnectivity pixelConnectivity, uchar foregraoundValue);
 
-    void drawConnectedComponents(cv::Mat &image, const std::vector<cv::ConnectedComponent> &connectedComponents);
+    void drawConnectedComponents(cv::Mat &image, const std::vector<ConnectedComponent> &connectedComponents);
 
     bool isBound(const cv::Point2i &point, const cv::Mat &image, PixelConnectivity pixelConnectivity);
 
