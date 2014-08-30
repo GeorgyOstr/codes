@@ -3,8 +3,10 @@
 
 #include <opencv2/opencv.hpp>
 
+#include <components.hpp>
 
-#define HIGH_DEF
+
+//#define HIGH_DEF
 
 const std::string currentDateTime() 
 {
@@ -13,15 +15,58 @@ const std::string currentDateTime()
     char       buf[80];
     tstruct = *localtime(&now);
 
-    strftime(buf, sizeof(buf), "%Y-%m-%d %X", &tstruct);
+    strftime(buf, sizeof buf, "%Y-%m-%d %X", &tstruct);
 
     return buf;
+}
+
+void calcMeanImage(std::vector<cv::Mat> const &backgroundImages, cv::Mat &meanImage)
+{
+    CV_Assert(!backgroundImages.empty());
+
+    double factor = 1 / static_cast<double>(backgroundImages.size());
+    cv::Mat accumImage = cv::Mat::zeros(backgroundImages[0].size(), CV_64FC3);
+
+    std::for_each(backgroundImages.begin(), backgroundImages.end(), [&accumImage, factor](cv::Mat const &item)
+    {
+            cv::Mat converted;
+            item.convertTo(converted, CV_64FC3, factor);
+            accumImage += converted;
+    });
+
+    accumImage.convertTo(meanImage, CV_8UC3);
+    cv::cvtColor(meanImage, meanImage, CV_BGR2GRAY);
+
+}
+
+void initilizeBackground(const unsigned historySize, cv::Mat &background,
+                         std::vector<cv::Mat> backgroundImages, cv::VideoCapture  &capture)
+{
+    while(backgroundImages.size() < historySize)
+    {
+        cv::Mat frame;
+        capture >> frame;
+        cv::imshow("video", frame);
+        int key = cv::waitKey(30);
+        if(key == 27)
+            break;
+        if(key == 10)
+            backgroundImages.push_back(frame);
+    }
+
+    CV_Assert(backgroundImages.size() == historySize);
+
+    calcMeanImage(backgroundImages, background);
 }
 
 int main(int, char** )
 {
     const int alarmThreshhold = 17000;
     const double fps = 20.0;
+    const int saveFrameCount = 150;
+    double sum;
+    int frameCount = 0;
+
 #ifdef HIGH_DEF
     const int height = 720;
     const int width = 1280;
@@ -30,18 +75,13 @@ int main(int, char** )
     const int width = 640;
 #endif
 
-    const int saveFrameCount = 150;
-
-    double sum;
-    int frameCount = 0;
-
     cv::VideoCapture capture(-1);
     capture.set(CV_CAP_PROP_FRAME_WIDTH, width);
     capture.set(CV_CAP_PROP_FRAME_HEIGHT, height);
 
     if(!capture.isOpened()) return -1;
 
-    cv::Mat frame, convertedFrame, prefFrame = cv::Mat::zeros(height, width, CV_8U), diff(height, width, CV_8U);
+    cv::Mat frame, convertedFrame, diff(height, width, CV_8U);
     capture >> frame;
 
     if(frame.empty()) return -1;
@@ -58,22 +98,32 @@ int main(int, char** )
         return -1;
     }
 
+    std::vector<cv::Mat> backgroundImages;
+    cv::Mat background;
+    const unsigned historySize = 5u;
+
+    initilizeBackground(historySize, background, backgroundImages, capture);
+
     for(;;)
     {
         capture >> frame;
-
 
         cv::cvtColor(frame, convertedFrame, CV_BGR2GRAY);
         if(frame.empty())
             break;
 
-        cv::absdiff(convertedFrame, prefFrame, diff);
-
-        convertedFrame.copyTo(prefFrame);
+        cv::absdiff(convertedFrame, background, diff);
 
         cv::threshold(diff, diff, 70, 255, CV_THRESH_BINARY);
 
         cv::imshow("diff", diff);
+
+        std::vector<cv::ConnectedComponent> connectedComponents;
+
+        cv::findConnectedComponents(diff, connectedComponents, cv::eightConnected, 255u);
+
+        for(auto const &connectedComponent : connectedComponents)
+            cv::rectangle(frame, connectedComponent.getBoundBox(), cv::Scalar(255,0,0), 3);
 
         time_t  timev;
         std::time(&timev);
