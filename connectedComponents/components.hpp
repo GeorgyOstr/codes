@@ -12,9 +12,9 @@ namespace cv
         const std::vector<cv::Point2i> &getPoints() const;
         void addBoundPoint(const cv::Point2i &point);
 
-        unsigned calcPerimeter() const;
-        unsigned calcArea() const;
-        Point2d calcCenter() const;
+        unsigned getPerimeter() const;
+        unsigned getArea() const;
+        Point2d getCenter() const;
 
         double roundness_1() const;
         double roundness_2() const;

@@ -47,7 +47,7 @@ void initilizeBackground(const unsigned historySize, cv::Mat &background,
         cv::Mat frame;
         capture >> frame;
         cv::imshow("video", frame);
-        int key = cv::waitKey(30);
+        int key = cv::waitKey(30) & 0xFF;
         if(key == 27)
             break;
         if(key == 10)
@@ -64,6 +64,7 @@ int main(int, char** )
     const int alarmThreshhold = 17000;
     const double fps = 20.0;
     const int saveFrameCount = 150;
+    const unsigned minArea = 10;
     double sum;
     int frameCount = 0;
 
@@ -118,12 +119,24 @@ int main(int, char** )
 
         cv::imshow("diff", diff);
 
-        std::vector<cv::ConnectedComponent> connectedComponents;
+        cv::morphologyEx(diff, diff, cv::MORPH_OPEN, cv::Mat::ones(13, 13, CV_8U));
 
+        std::vector<cv::ConnectedComponent> connectedComponents;
         cv::findConnectedComponents(diff, connectedComponents, cv::eightConnected, 255u);
 
-        for(auto const &connectedComponent : connectedComponents)
-            cv::rectangle(frame, connectedComponent.getBoundBox(), cv::Scalar(255,0,0), 3);
+        auto it = std::remove_if(connectedComponents.begin(), connectedComponents.end(),
+                                 [minArea](cv::ConnectedComponent const &item)
+        {
+            return item.getArea() > minArea;
+        });
+
+        connectedComponents.erase(it, connectedComponents.end());
+
+        std::for_each(connectedComponents.begin(), connectedComponents.end(),
+                      [&frame](cv::ConnectedComponent const &item)
+        {
+            cv::rectangle(frame, item.getBoundBox(), cv::Scalar(255,0,0), 3);
+        });
 
         time_t  timev;
         std::time(&timev);

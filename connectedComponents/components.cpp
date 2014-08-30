@@ -189,14 +189,14 @@ void ConnectedComponent::draw(Mat &image, cv::RNG &rng) const
     const cv::Point2i br = bRect.br();
     cv::Point2i pointToPutText = cv::Point2i(tl.x, br.y + 13);
 
-    cv::circle(image, calcCenter(), 2, bColor, 6);
+    cv::circle(image, getCenter(), 2, bColor, 6);
 
     cv::rectangle(image, bRect, cv::Scalar(0,255,0));
 
     auto moments = getMoments_1();
     cv::Point2d secondPoint(std::cos(std::get<0>(moments)) * 100., std::sin(std::get<0>(moments)) * 100.);
-    secondPoint += calcCenter();
-    cv::line(image, calcCenter(), secondPoint, bColor);
+    secondPoint += getCenter();
+    cv::line(image, getCenter(), secondPoint, bColor);
 
     auto centralSecond = centralSecondMomentRowNCols();
     auto mixedCentral = mixedCentralMoment();
@@ -242,17 +242,17 @@ void ConnectedComponent::addBoundPoint(const Point2i &point)
     boundPoints.push_back(point);
 }
 
-unsigned ConnectedComponent::calcPerimeter() const
+unsigned ConnectedComponent::getPerimeter() const
 {
     return boundPoints.size();
 }
 
-unsigned ConnectedComponent::calcArea() const
+unsigned ConnectedComponent::getArea() const
 {
     return points.size();
 }
 
-Point2d ConnectedComponent::calcCenter() const
+Point2d ConnectedComponent::getCenter() const
 {
     cv::Point2d center(0.,0.);
 
@@ -261,20 +261,20 @@ Point2d ConnectedComponent::calcCenter() const
         center +=point;
     });
 
-    center.x = center.x / calcArea();
-    center.y = center.y / calcArea();
+    center.x = center.x / getArea();
+    center.y = center.y / getArea();
 
     return center;
 }
 
 double ConnectedComponent::roundness_1() const
 {
-    return static_cast<double>(calcPerimeter() * calcPerimeter()) / calcArea();
+    return static_cast<double>(getPerimeter() * getPerimeter()) / getArea();
 }
 
 double ConnectedComponent::roundness_2() const
 {
-    cv::Point2d center {calcCenter()};
+    cv::Point2d center {getCenter()};
     double accumM{}, accumD{};
 
     auto functorMU = [center, &accumM](const cv::Point2d &point)
@@ -284,7 +284,7 @@ double ConnectedComponent::roundness_2() const
     };
     std::for_each(boundPoints.begin(), boundPoints.end(), functorMU);
 
-    accumM /= calcPerimeter();
+    accumM /= getPerimeter();
 
     auto functorD = [center, accumM, &accumD](const cv::Point2d &point)
     {
@@ -293,7 +293,7 @@ double ConnectedComponent::roundness_2() const
     };
     std::for_each(boundPoints.begin(), boundPoints.end(), functorD);
 
-    accumD /= calcPerimeter();
+    accumD /= getPerimeter();
 
     accumD = std::sqrt(accumD);
 
@@ -302,7 +302,7 @@ double ConnectedComponent::roundness_2() const
 
 std::pair<double, double> ConnectedComponent::centralSecondMomentRowNCols() const
 {
-    cv::Point2d center {calcCenter()}, accum {};
+    cv::Point2d center {getCenter()}, accum {};
 
     auto functor = [center, &accum](const cv::Point2d &point)
     {
@@ -311,15 +311,15 @@ std::pair<double, double> ConnectedComponent::centralSecondMomentRowNCols() cons
     };
     std::for_each(points.begin(), points.end(), functor);
 
-    accum.x /= calcArea();
-    accum.y /= calcArea();
+    accum.x /= getArea();
+    accum.y /= getArea();
 
     return std::make_pair(accum.x, accum.y);
 }
 
 double ConnectedComponent::mixedCentralMoment() const
 {
-    cv::Point2d center {calcCenter()};
+    cv::Point2d center {getCenter()};
     double accum {};
 
     auto functor = [center, &accum](const cv::Point2d &point)
@@ -329,7 +329,7 @@ double ConnectedComponent::mixedCentralMoment() const
     };
     std::for_each(points.begin(), points.end(), functor);
 
-    return accum / calcArea();
+    return accum / getArea();
 }
 
 Rect ConnectedComponent::getBoundBox() const
