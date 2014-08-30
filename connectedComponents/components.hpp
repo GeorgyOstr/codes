@@ -19,17 +19,19 @@ namespace cv
         double roundness_1() const;
         double roundness_2() const;
 
-        std::tuple<double, double> centralSecondMomentRowNCols() const;
+        std::pair<double, double> centralSecondMomentRowNCols() const;
         double mixedCentralMoment() const;
-
         cv::Rect getBoundBox() const;
+
+        std::pair<double, double> getMoments_1() const;
+        std::pair<double, double> getMoments_2() const;
 
     private:
         std::vector<cv::Point2i> points;
         std::vector<cv::Point2i> boundPoints;
     };
 
-    enum PixelConnectivity { fourConnected, eightConnected };
+    enum PixelConnectivity : unsigned { fourConnected, eightConnected };
 
     void findConnectedComponents(const cv::Mat &image, std::vector<cv::ConnectedComponent> &connectedComponents,
                                  PixelConnectivity pixelConnectivity, uchar foregraoundValue);
