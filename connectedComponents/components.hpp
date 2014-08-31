@@ -1,6 +1,7 @@
+#include <iomanip>
+
 #include <opencv2/opencv.hpp>
 
-#include <iomanip>
 
 namespace cv
 {

@@ -386,14 +386,20 @@ std::pair<double, double> ConnectedComponent::getMoments_1() const
 //        }
 //    }
 
-    double mixed = mixedCentralMoment();
+//    double mixed = mixedCentralMoment();
 
-    auto central = centralSecondMomentRowNCols();
+//    auto central = centralSecondMomentRowNCols();
 
-    double maxValueAngle = std::atan(2*mixed/(std::get<0>(central) - std::get<1>(central)));
+//    double maxValueAngle = std::atan(2*mixed/(std::get<0>(central) - std::get<1>(central)));
 
-    return std::make_pair(maxValueAngle, maxValueAngle + M_PI_2);
+//    return std::make_pair(maxValueAngle, maxValueAngle + M_PI_2);
 
+    CV_Assert(false);//not ready
+}
+
+std::pair<double, double> ConnectedComponent::getMoments_2() const
+{
+    CV_Assert(false);//not ready
 }
 
 void drawConnectedComponents(Mat &image, const std::vector<ConnectedComponent> &connectedComponents)

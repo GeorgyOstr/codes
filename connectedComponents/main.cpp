@@ -26,5 +26,7 @@ int main(int argc, char **argv)
 
     cv::imshow("components", components);
 
+    cv::waitKey();
+
     return 0;
 }
