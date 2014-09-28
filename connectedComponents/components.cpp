@@ -194,9 +194,13 @@ void ConnectedComponent::draw(Mat &image, cv::RNG &rng) const
     cv::rectangle(image, bRect, cv::Scalar(0,255,0));
 
     auto moments = getMoments_1();
-    cv::Point2d secondPoint(std::cos(std::get<0>(moments)) * 100., std::sin(std::get<0>(moments)) * 100.);
-    secondPoint += getCenter();
-    cv::line(image, getCenter(), secondPoint, bColor);
+    auto center = getCenter();
+
+    cv::Point2d secondPoint(std::cos(moments.first) * 100., std::sin(moments.first) * 100.);
+    cv::line(image, center + secondPoint, center - secondPoint, bColor);
+
+    secondPoint = cv::Point2d(std::cos(moments.second) * 50., std::sin(moments.second) * 50.);
+    cv::line(image, center + secondPoint, center - secondPoint, bColor);
 
     auto centralSecond = centralSecondMomentRowNCols();
     auto mixedCentral = mixedCentralMoment();
@@ -357,49 +361,61 @@ Rect ConnectedComponent::getBoundBox() const
 
 std::pair<double, double> ConnectedComponent::getMoments_1() const
 {
-//    double minValue{std::numeric_limits<double>::max()}, maxValue{};
-//    double minValueAngle{-1.}, maxValueAngle{-1.};
 
-//    using namespace std::placeholders;
-//    for(double angle = 0.; angle < M_PI; angle += M_PI / 180.)
-//    {
-//        double accum{};
-//        auto functor = [&accum](const cv::Point2d &point, double angle)
-//        {
-//            angle += M_PI_2;
-//            double tValue = point.dot(cv::Point2d(std::cos(angle), std::sin(angle)));
-//            accum += tValue * tValue;
-//        };
+    double minValue{std::numeric_limits<double>::max()}, maxValue{};
+    double minValueAngle{-1.}, maxValueAngle{-1.};
 
-//        std::for_each(points.begin(), points.end(), std::bind(functor, _1, angle));
+    using namespace std::placeholders;
 
-//        if(minValue > accum)
-//        {
-//            minValue = accum;
-//            minValueAngle = angle;
-//        }
+    const Point2d center = getCenter();
 
-//        if(maxValue < accum)
-//        {
-//            maxValue = accum;
-//            maxValueAngle = angle;
-//        }
-//    }
+    for(double angle = 0.; angle < 180.; ++angle)
+    {
+        double accum{};
+        auto functor = [&accum, &center](cv::Point2d point, double angle)
+        {
+            double rad = angle / 180. * M_PI;
+
+            point -= center;
+
+            double tValue = point.dot(cv::Point2d(-std::sin(rad), std::cos(rad)));
+            accum += tValue * tValue;
+        };
+
+        std::for_each(points.begin(), points.end(), std::bind(functor, _1, angle));
+
+        if(minValue > accum)
+        {
+            minValue = accum;
+            minValueAngle = angle / 180. * M_PI;
+        }
+
+        if(maxValue < accum)
+        {
+            maxValue = accum;
+            maxValueAngle = angle / 180. * M_PI;
+        }
+    }
+
+    return std::make_pair(minValueAngle, maxValueAngle);
+
+}
+
+std::pair<double, double> ConnectedComponent::getMoments_2() const
+{
 
 //    double mixed = mixedCentralMoment();
 
 //    auto central = centralSecondMomentRowNCols();
 
-//    double maxValueAngle = std::atan(2*mixed/(std::get<0>(central) - std::get<1>(central)));
+//    if(central.first - central.second <= 1e-2)
+//        return std::pair<double, double>();
+
+//    double maxValueAngle = std::atan(2 * mixed / (central.first - central.second));
 
 //    return std::make_pair(maxValueAngle, maxValueAngle + M_PI_2);
 
-    CV_Assert(false);//not ready
-}
-
-std::pair<double, double> ConnectedComponent::getMoments_2() const
-{
-    CV_Assert(false);//not ready
+    CV_Assert(false);
 }
 
 void drawConnectedComponents(Mat &image, const std::vector<ConnectedComponent> &connectedComponents)
