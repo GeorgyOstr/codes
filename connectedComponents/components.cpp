@@ -69,9 +69,9 @@ void findConnectedComponents(const cv::Mat &image, std::vector<cv::ConnectedComp
 
     short unlabaled {foregroundValue}, currentLabel {1};
 
-    for(unsigned y = 0u; y < inverted.rows; ++y)
+    for(int y = 0u; y < inverted.rows; ++y)
     {
-        for(unsigned x = 0u; x < inverted.cols; ++x)
+        for(int x = 0u; x < inverted.cols; ++x)
         {
             if(inverted.at<short>(y,x) == -unlabaled)
             {
@@ -93,9 +93,9 @@ void findConnectedComponents(const cv::Mat &image, std::vector<cv::ConnectedComp
     std::map<unsigned, unsigned> adapter;
     unsigned count {};
 
-    for(unsigned y = 0u; y < inverted.rows; ++y)
+    for(int y = 0u; y < inverted.rows; ++y)
     {
-        for(unsigned x = 0u; x < inverted.cols; ++x)
+        for(int x = 0u; x < inverted.cols; ++x)
         {
             CV_Assert(inverted.at<short>(y,x) >= 0);
             if(inverted.at<short>(y,x) != 0)
@@ -133,14 +133,14 @@ UnionSearch::UnionSearch()
 
 void UnionSearch::add(short element)
 {
-    CV_Assert(storage.size() == element);
+    CV_Assert(storage.size() == size_t(element));
     storage.push_back(0);
 }
 
 unsigned UnionSearch::findParent(short element)
 {
     CV_Assert(element >= 1);
-    CV_Assert(element < storage.size());
+    CV_Assert(size_t(element) < storage.size());
 
     unsigned parent = static_cast<unsigned>(element);
 
@@ -365,24 +365,21 @@ std::pair<double, double> ConnectedComponent::getMoments_1() const
     double minValue{std::numeric_limits<double>::max()}, maxValue{};
     double minValueAngle{-1.}, maxValueAngle{-1.};
 
-    using namespace std::placeholders;
-
     const Point2d center = getCenter();
 
     for(double angle = 0.; angle < 180.; ++angle)
     {
-        double accum{};
-        auto functor = [&accum, &center](cv::Point2d point, double angle)
+        double accum{}; 
+
+        std::for_each(points.begin(), points.end(), [&accum, &center, angle](cv::Point2d point)
         {
-            double rad = angle / 180. * M_PI;
+            const double rad = angle / 180. * M_PI;
 
             point -= center;
 
             double tValue = point.dot(cv::Point2d(-std::sin(rad), std::cos(rad)));
             accum += tValue * tValue;
-        };
-
-        std::for_each(points.begin(), points.end(), std::bind(functor, _1, angle));
+        });
 
         if(minValue > accum)
         {
@@ -416,6 +413,8 @@ std::pair<double, double> ConnectedComponent::getMoments_2() const
 //    return std::make_pair(maxValueAngle, maxValueAngle + M_PI_2);
 
     CV_Assert(false);
+
+    return std::pair<double, double>();
 }
 
 void drawConnectedComponents(Mat &image, const std::vector<ConnectedComponent> &connectedComponents)
@@ -424,10 +423,10 @@ void drawConnectedComponents(Mat &image, const std::vector<ConnectedComponent> &
 
     cv::RNG rng( 0xFFFFFFFF );
 
-    using namespace std::placeholders;
-
-    std::for_each(connectedComponents.begin(), connectedComponents.end(),
-                  std::bind(std::mem_fn(&ConnectedComponent::draw), _1, image, rng));
+    std::for_each(connectedComponents.begin(), connectedComponents.end(), [&rng, &image](const ConnectedComponent &item)
+    {
+        item.draw(image, rng);
+    });
 }
 
 bool isBound(const Point2i &point, const Mat &image, PixelConnectivity pixelConnectivity)
