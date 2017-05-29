@@ -1,4 +1,6 @@
-project(dummy)
+set(project_name "dummy")
 
-add_executable(dummy main.cpp)
-target_link_libraries(dummy ${OpenCV_LIBS})
+project(${project_name})
+
+add_executable(${project_name} main.cpp)
+target_link_libraries(${project_name} ${OpenCV_LIBS})
