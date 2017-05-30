@@ -1,6 +1,5 @@
-set(project_name "dummy")
-
-project(${project_name})
-
-add_executable(${project_name} main.cpp)
-target_link_libraries(${project_name} ${OpenCV_LIBS})
+cmake_minimum_required(VERSION 2.8)
+project( DisplayImage )
+find_package( OpenCV REQUIRED )
+add_executable( DisplayImage main.cpp )
+target_link_libraries( DisplayImage ${OpenCV_LIBS} )

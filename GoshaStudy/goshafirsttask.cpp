@@ -18,7 +18,7 @@ int main(int argc, char *argv[])
   Mat image = imread(argv[1]);
   if (image.type()!=CV_8UC3)
     {
-      std::cout<<"Not an image.";
+      std::cout<<"Not an image.\n";
       return -1;
     }
   putText(image, "This is the one special tree from FFX", Point2f(50,20), FONT_HERSHEY_PLAIN, 1, Scalar(0,0,250,0));
